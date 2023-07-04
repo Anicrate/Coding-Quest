@@ -13,7 +13,7 @@ p.then((value) => {
                     <h4>Website : ${value[item].site.toUpperCase()}</h4>
                     <h5 class="card-title">${value[item].name}</h5>
                     <p>Starts at:${startdate} </p>
-                    <p>Starts at: ${enddate}</p>
+                    <p>Ends at: ${enddate}</p>
                     <a href="${value[item].url}" class="btn btn-primary btn-pink">Visit here</a>
             </div>`
         contest.innerHTML = data
