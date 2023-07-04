@@ -3,10 +3,8 @@ let p = fetch('https://kontests.net/api/v1/all')
 p.then((value) => {
     return value.json()
 }).then((value)=> {
-    console.log(value)
     data =""
     for (item in value){
-        console.log(value[item])
         const startdate = new Date(value[item].start_time)
         const enddate = new Date(value[item].end_time)
         data+=`<div class="card">
