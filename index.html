@@ -1,55 +1,145 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Codequest: Lets Code</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CodeQuest — Live Coding Contest Tracker</title>
+  <meta name="description"
+    content="Track upcoming and live competitive programming contests across Codeforces, LeetCode and CodeChef in real time." />
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c9cff'/%3E%3Ctext x='16' y='22' font-size='16' font-family='monospace' font-weight='700' fill='%2308090d' text-anchor='middle'%3E%3C/%3E%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-    <div class="total">
-        <nav class="navbar navbar-expand-lg bg-body-tertiary">
-            <div class="container-fluid">
-                <img src="logo.png" alt="" width="30px">
-                <h2>Codequest: Lets Code</h2>
-                <form class="d-flex" role="search">
-                    <input id="myInput" onkeyup="myFunction()" class="form-control me-2" type="search"
-                        placeholder="Search" aria-label="Search">
-                </form>
-            </div>
+  <div class="bg-glow" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </div>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 6L4 12L9 18M15 6L20 12L15 18" stroke="#08090d" stroke-width="2.4" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </span>
+      <span>
+        CodeQuest
+        <small>Contest radar</small>
+      </span>
     </div>
-    </nav>
-    <div class="container">
-        <h1>Discover and Dominate: Unveiling the Hottest Upcoming Contests!</h1>
-        <div class="innercontainer">
-            <p>Are you ready to unleash your coding skills and take on thrilling challenges? Look no further!
-                This groundbreaking project is your ultimate destination to
-                discover and
-                dominate the hottest upcoming coding contests. With a curated list of exciting competitions from
-                around
-                the globe.
-                Join us where the future of coding
-                contests awaits you!
-            </p>
-            <div class="image">
-                <img src="contestimg.jpg" alt="#" width="500" height="500">
-            </div>
+    <div class="header-actions">
+      <a class="gh-link" href="https://codeforces.com" target="_blank" rel="noopener">
+        Data by Codeforces, LeetCode &amp; CodeChef
+      </a>
+      <button class="icon-btn" id="refreshBtn" title="Refresh contests" aria-label="Refresh contests">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M23 4v6h-6" />
+          <path d="M1 20v-6h6" />
+          <path d="M3.51 9a9 9 0 0114.13-3.36L23 10M1 14l5.36 4.36A9 9 0 0020.49 15" />
+        </svg>
+      </button>
+      <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle color theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <span class="eyebrow"><span class="dot"></span> Live data · refreshed from the source APIs</span>
+      <h1>Never miss your next <span class="grad">coding contest</span> again.</h1>
+      <p>
+        CodeQuest pulls real-time contest schedules straight from Codeforces, LeetCode and CodeChef —
+        no stale lists, no dead links. Filter by platform, search by name, and watch the countdown tick.
+      </p>
+
+      <div class="stats" id="stats">
+        <div class="stat-tile">
+          <b id="statTotal">–</b>
+          <span>Tracked</span>
         </div>
+        <div class="stat-tile">
+          <b id="statLive">–</b>
+          <span>Live now</span>
+        </div>
+        <div class="stat-tile">
+          <b id="statPlatforms">–</b>
+          <span>Platforms</span>
+        </div>
+      </div>
+    </section>
 
+    <div class="controls">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.3-4.3" />
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search contests…" aria-label="Search contests" />
+      </div>
+
+      <div class="filter-row">
+        <div class="chip-group" id="siteFilter" role="group" aria-label="Filter by platform">
+          <button class="chip active" data-site="all">All</button>
+          <button class="chip" data-site="codeforces"><span class="swatch" style="background:#4d8fe6"></span>
+            Codeforces</button>
+          <button class="chip" data-site="leetcode"><span class="swatch" style="background:#ffb800"></span>
+            LeetCode</button>
+          <button class="chip" data-site="codechef"><span class="swatch" style="background:#e2703a"></span>
+            CodeChef</button>
+        </div>
+        <select class="sort-select" id="sortSelect" aria-label="Sort contests">
+          <option value="soonest">Soonest first</option>
+          <option value="latest">Latest first</option>
+          <option value="shortest">Shortest duration</option>
+          <option value="longest">Longest duration</option>
+        </select>
+      </div>
     </div>
 
-    <div id="contest" class="row">
+    <div class="banner" id="banner" hidden></div>
 
+    <div class="grid-wrap">
+      <div class="grid" id="grid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
     </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-        crossorigin="anonymous"></script>
-    <script src="index.js"></script>
+  </main>
+
+  <footer class="site-footer">
+    <span id="lastUpdated">Loading data…</span>
+    <span class="sources">
+      <a href="https://codeforces.com/apiHelp" target="_blank" rel="noopener">Codeforces API</a>
+      <a href="https://leetcode.com" target="_blank" rel="noopener">LeetCode</a>
+      <a href="https://www.codechef.com" target="_blank" rel="noopener">CodeChef</a>
+    </span>
+  </footer>
+
+  <script src="index.js"></script>
 </body>
 
 </html>
