@@ -88,18 +88,27 @@ async function fetchLeetCode() {
   const json = await res.json();
   const now = Date.now();
 
+  // This feed mixes every platform; Codeforces and CodeChef already come from
+  // their own sources, so keep only LeetCode rows here.
   return json
-    .filter((c) => c.endTime > now)
-    .map((c, i) => ({
-      id: `lc-${c.title}-${i}`,
-      site: 'leetcode',
-      siteLabel: 'LeetCode',
-      name: c.title,
-      url: c.url || 'https://leetcode.com/contest/',
-      startTime: c.startTime,
-      endTime: c.endTime,
-      durationMs: c.duration,
-    }));
+    .filter((c) => (c.site || '').toLowerCase() === 'leetcode')
+    .map((c) => {
+      // The feed reports LeetCode durations 60x too large (90 min arrives as
+      // 5,400 min). LeetCode rounds never exceed a few hours, so rescale.
+      let durationMs = Number(c.duration) || (c.endTime - c.startTime);
+      if (durationMs > 12 * 3600000) durationMs = Math.round(durationMs / 60);
+      return {
+        id: `lc-${(c.url || c.title).replace(/\W+/g, '-')}`,
+        site: 'leetcode',
+        siteLabel: 'LeetCode',
+        name: c.title,
+        url: c.url || 'https://leetcode.com/contest/',
+        startTime: c.startTime,
+        endTime: c.startTime + durationMs,
+        durationMs,
+      };
+    })
+    .filter((c) => c.endTime > now);
 }
 
 async function fetchCodeChef() {
@@ -142,9 +151,15 @@ async function loadContests({ silent = false } = {}) {
 
   const results = await Promise.allSettled(SOURCES.map((s) => s.fetcher()));
 
+  const seen = new Set();
   const contests = [];
   results.forEach((result) => {
-    if (result.status === 'fulfilled') contests.push(...result.value);
+    if (result.status !== 'fulfilled') return;
+    result.value.forEach((c) => {
+      if (seen.has(c.id)) return; // never show the same contest twice
+      seen.add(c.id);
+      contests.push(c);
+    });
   });
 
   state.contests = contests;

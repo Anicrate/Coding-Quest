@@ -22,6 +22,7 @@
   const fmtDay = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const fmtDateTime = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const fmtMonth = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit' });
+  const fmtTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
   const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
 
   let latest = null;
@@ -76,10 +77,26 @@
         const a = soon[i], b = soon[j];
         if (b.startTime >= a.endTime) break;
         if (a.site === b.site && a.startTime === b.startTime) continue; // parallel divisions, same event
+        if (a.name === b.name) continue; // same contest listed twice by a feed
         const overlap = Math.min(a.endTime, b.endTime) - b.startTime;
         if (overlap > 0) clashes.push({ a, b, overlapMin: Math.round(overlap / 60000) });
       }
     }
+    // Parallel rounds (e.g. Div. 1 and Div. 2 at the same time) clashing with the
+    // same contest are one decision for the user — merge them into one row.
+    const merged = new Map();
+    clashes.forEach((c) => {
+      const key = [c.a, c.b].map((x) => `${x.site}@${x.startTime}`).sort().join('|');
+      const prev = merged.get(key);
+      if (!prev) { merged.set(key, { ...c, a: { ...c.a }, b: { ...c.b } }); return; }
+      ['a', 'b'].forEach((side) => {
+        const names = prev[side].name.split(' / ');
+        if (!names.includes(c[side].name)) prev[side].name = [...names, c[side].name].join(' / ');
+      });
+      prev.overlapMin = Math.max(prev.overlapMin, c.overlapMin);
+    });
+    clashes.length = 0;
+    clashes.push(...merged.values());
 
     // 2. Load over the next 14 days
     const today = startOfDay(now);
@@ -132,7 +149,7 @@
     const cadence = TYPES.map((type) => {
       const runs = last12.filter((c) => cfType(c.name) === type).map((c) => c.startTime).sort((a, b) => a - b);
       const uniq = [...new Set(runs)];
-      if (uniq.length < 2) return null;
+      if (uniq.length < 4) return null; // too few rounds to forecast honestly
       const gaps = uniq.slice(1).map((t, i) => (t - uniq[i]) / DAY);
       const gap = median(gaps);
       const last = uniq[uniq.length - 1];
@@ -171,20 +188,22 @@
     const worst = a.clashes.reduce((m, c) => (c.overlapMin > m.overlapMin ? c : m));
     $('clashTake').textContent =
       `${a.clashes.length} ${a.clashes.length === 1 ? 'clash' : 'clashes'} ahead. The biggest is ${worst.overlapMin} minutes on ${fmtDay.format(new Date(worst.b.startTime))} — decide which one you're entering before the day.`;
+    const side = (c) => `
+          <span class="clash-side">
+            <span class="clash-plat" style="--c:${SITE[c.site].color}">${SITE[c.site].label}</span>
+            <span class="clash-name">${esc(c.name)}</span>
+            <span class="clash-time">${fmtTime.format(new Date(c.startTime))} – ${fmtTime.format(new Date(c.endTime))}</span>
+          </span>`;
     $('clashList').innerHTML = a.clashes.slice(0, 8).map(({ a: x, b: y, overlapMin }) => `
       <li>
         <span class="clash-when">${fmtDay.format(new Date(y.startTime))}</span>
-        <span class="clash-pair">
-          <i style="background:${SITE[x.site].color}"></i>${esc(x.name)}
-          <span class="vs">×</span>
-          <i style="background:${SITE[y.site].color}"></i>${esc(y.name)}
-        </span>
-        <span class="clash-min">${overlapMin} min overlap</span>
-      </li>`).join('');
+        <span class="clash-pair">${side(x)}<span class="vs">vs</span>${side(y)}</span>
+        <span class="clash-min">${overlapMin}<small>min overlap</small></span>
+      </li>`).join('') + (a.clashes.length > 8 ? `<li class="clash-more">+ ${a.clashes.length - 8} more</li>` : '');
   }
 
   function renderLoad(a) {
-    const W = 700, H = 200, P = { l: 28, r: 8, t: 12, b: 34 };
+    const W = 1000, H = 230, P = { l: 28, r: 8, t: 12, b: 36 };
     const max = Math.max(1, ...a.days.map((d) => d.codeforces + d.leetcode + d.codechef));
     const bw = (W - P.l - P.r) / a.days.length;
     const y = (n) => P.t + (H - P.t - P.b) * (1 - n / max);
@@ -223,10 +242,19 @@
       Array.from({ length: 24 }, (_, h) => `<span>${h % 3 === 0 ? String(h).padStart(2, '0') : ''}</span>`).join('') + '</div>';
     a.heat.forEach((row, d) => {
       html += `<div class="hm-row"><span class="hm-day">${WEEKDAYS[d]}</span>` +
-        row.map((n, h) => `<span class="hm-cell" style="--v:${n ? 0.15 + 0.85 * (n / max) : 0}" title="${WEEKDAYS[d]} ${fmtHour(h)} — ${plural(n, 'round')}"></span>`).join('') +
+        row.map((n, h) => `<span class="hm-cell${n ? ' on' : ''}" style="--v:${n ? Math.round((0.25 + 0.75 * (n / max)) * 100) : 0}%" title="${WEEKDAYS[d]} ${fmtHour(h)} — ${plural(n, 'round')}">${n && n / max >= 0.35 ? n : ''}</span>`).join('') +
         '</div>';
     });
+    html += `<div class="hm-legend"><span>fewer</span><i style="--v:25%"></i><i style="--v:50%"></i><i style="--v:75%"></i><i style="--v:100%"></i><span>more rounds</span></div>`;
     $('heatmap').innerHTML = html;
+    // On narrow screens the grid scrolls — start it at the busiest hour.
+    requestAnimationFrame(() => {
+      const wrap = document.querySelector('.heatmap-wrap');
+      const cell = $('heatmap').querySelectorAll('.hm-row')[a.peak.d + 1]?.children[a.peak.h + 1];
+      if (wrap && cell && wrap.scrollWidth > wrap.clientWidth) {
+        wrap.scrollLeft = Math.max(0, cell.offsetLeft - wrap.clientWidth / 2);
+      }
+    });
     if (!a.slots12.length) { $('heatTake').textContent = 'Not enough Codeforces history loaded to map start times.'; return; }
     $('heatTake').textContent =
       `${pct(a.weekend, a.slots12.length)}% of Codeforces rounds start on a weekend, and ${a.eveningShare}% start after 5 PM your time. ` +
@@ -234,14 +262,20 @@
   }
 
   function renderTrend(a) {
-    const W = 340, H = 170, P = { l: 26, r: 6, t: 10, b: 24 };
+    const W = 340, H = 180, P = { l: 24, r: 6, t: 10, b: 24 };
     const max = Math.max(1, ...a.months.map((m) => m.n));
     const bw = (W - P.l - P.r) / a.months.length;
     const y = (n) => P.t + (H - P.t - P.b) * (1 - n / max);
     const bars = a.months.map((m, i) =>
       `<rect x="${P.l + i * bw + 1}" y="${y(m.n)}" width="${bw - 2}" height="${H - P.b - y(m.n)}" rx="2" class="${m.partial ? 'partial' : i >= 24 ? 'recent' : 'older'}"><title>${fmtMonth.format(new Date(m.t))}: ${m.n}${m.partial ? ' (so far)' : ''}</title></rect>`).join('');
     const ticks = [0, 12, 24, 35].map((i) => `<text x="${P.l + i * bw + bw / 2}" y="${H - 6}" text-anchor="middle" class="faint">${fmtMonth.format(new Date(a.months[i].t))}</text>`).join('');
-    $('trendChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Codeforces rounds per month"><line x1="${P.l}" x2="${W - P.r}" y1="${H - P.b}" y2="${H - P.b}" class="gl"/><text x="${P.l - 5}" y="${y(max) + 4}" text-anchor="end" class="faint">${max}</text>${bars}${ticks}</svg>`;
+    const step = Math.max(1, Math.ceil(max / 4));
+    let grid = '';
+    for (let n = 0; n <= max; n += step) grid += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(n)}" y2="${y(n)}" class="gl"/><text x="${P.l - 5}" y="${y(n) + 3.5}" text-anchor="end" class="faint">${n}</text>`;
+    const avgPrev = a.prevYear / 12, avgThis = a.thisYear / 12;
+    const avgLines = `<line x1="${P.l + 12 * bw}" x2="${P.l + 24 * bw}" y1="${y(avgPrev)}" y2="${y(avgPrev)}" class="avg"/><line x1="${P.l + 24 * bw}" x2="${W - P.r}" y1="${y(avgThis)}" y2="${y(avgThis)}" class="avg"/>`;
+    $('trendChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Codeforces rounds per month">${grid}${bars}${avgLines}${ticks}</svg>
+      <div class="legend"><span><i style="background:var(--cf-color)"></i>Last 12 months</span><span><i style="background:color-mix(in srgb, var(--cf-color) 45%, transparent)"></i>Earlier</span><span><i class="dash"></i>12-month average</span></div>`;
     if (a.yoy === null) { $('trendTake').textContent = `${a.thisYear} rounds in the last 12 months.`; return; }
     const dir = a.yoy > 5 ? 'more' : a.yoy < -5 ? 'fewer' : 'about the same number of';
     $('trendTake').textContent = `${a.thisYear} rounds in the last 12 months vs ${a.prevYear} the year before — ${dir === 'about the same number of' ? dir : `${Math.abs(a.yoy)}% ${dir}`} chances to practise under contest pressure.`;
@@ -320,6 +354,7 @@
         else el.style.display = showInsights ? 'none' : '';
       });
       insightsEl.hidden = !showInsights;
+      document.body.classList.toggle('view-insights', showInsights);
       if (showInsights && !rendered) render();
       try { history.replaceState(null, '', showInsights ? '#insights' : '#'); } catch { /* file:// */ }
     });
