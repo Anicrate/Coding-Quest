@@ -87,6 +87,59 @@
       </div>
     </section>
 
+    <div class="view-switch" role="tablist" aria-label="Choose view">
+      <button class="view-tab active" role="tab" aria-selected="true" data-view="contests">Contests</button>
+      <button class="view-tab" role="tab" aria-selected="false" data-view="insights">
+        Insights <span class="new-pill">data</span>
+      </button>
+    </div>
+
+    <section class="insights" id="insights" hidden aria-live="polite">
+      <div class="ins-loading" id="insLoading">Crunching contest history…</div>
+      <div class="ins-body" id="insBody" hidden>
+        <div class="ins-kpis" id="insKpis"></div>
+
+        <div class="ins-grid">
+          <article class="ins-card span-2">
+            <header><h3>Clash detector</h3><span class="ins-sub">Overlapping contests · next 14 days</span></header>
+            <p class="takeaway" id="clashTake"></p>
+            <ul class="clash-list" id="clashList"></ul>
+          </article>
+
+          <article class="ins-card span-2">
+            <header><h3>Your next 14 days</h3><span class="ins-sub">Contests starting per day, by platform</span></header>
+            <p class="takeaway" id="loadTake"></p>
+            <div class="chart" id="loadChart"></div>
+          </article>
+
+          <article class="ins-card span-2">
+            <header><h3>When contests actually happen</h3><span class="ins-sub" id="heatSub">Codeforces start times · last 12 months · your timezone</span></header>
+            <p class="takeaway" id="heatTake"></p>
+            <div class="heatmap-wrap"><div class="heatmap" id="heatmap"></div></div>
+          </article>
+
+          <article class="ins-card">
+            <header><h3>Is Codeforces getting busier?</h3><span class="ins-sub">Rounds per month · last 36 months</span></header>
+            <p class="takeaway" id="trendTake"></p>
+            <div class="chart" id="trendChart"></div>
+          </article>
+
+          <article class="ins-card">
+            <header><h3>Division mix</h3><span class="ins-sub">Share of rounds · last 12 months</span></header>
+            <p class="takeaway" id="mixTake"></p>
+            <div class="mix" id="mixChart"></div>
+          </article>
+
+          <article class="ins-card span-2">
+            <header><h3>Cadence forecast</h3><span class="ins-sub">When the next round of each type is due, from historical gaps</span></header>
+            <p class="takeaway" id="cadTake"></p>
+            <div class="cad-table" id="cadTable"></div>
+          </article>
+        </div>
+        <p class="ins-foot" id="insFoot"></p>
+      </div>
+    </section>
+
     <div class="controls">
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -140,6 +193,7 @@
   </footer>
 
   <script src="index.js"></script>
+  <script src="insights.js"></script>
 </body>
 
 </html>

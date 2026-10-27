@@ -30,6 +30,7 @@ const state = {
   site: 'all',
   sort: 'soonest',
   loading: true,
+  cfHistory: [],
 };
 
 /* --------------------------------------------------------------------------
@@ -56,6 +57,16 @@ async function fetchCodeforces() {
   if (!res.ok) throw new Error('Codeforces API error ' + res.status);
   const json = await res.json();
   if (json.status !== 'OK') throw new Error('Codeforces API returned an error');
+
+  // Keep the full finished-contest history for the Insights view.
+  state.cfHistory = json.result
+    .filter((c) => c.phase === 'FINISHED' && c.startTimeSeconds)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      startTime: c.startTimeSeconds * 1000,
+      durationMs: c.durationSeconds * 1000,
+    }));
 
   return json.result
     .filter((c) => c.phase === 'BEFORE' || c.phase === 'CODING')
@@ -142,6 +153,10 @@ async function loadContests({ silent = false } = {}) {
   updateBanner(results);
   updateStats();
   applyAndRender();
+
+  document.dispatchEvent(
+    new CustomEvent('cq:data', { detail: { upcoming: contests, cfHistory: state.cfHistory || [] } })
+  );
 
   els.lastUpdated.textContent = contests.length
     ? `Last updated ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(new Date())}`
